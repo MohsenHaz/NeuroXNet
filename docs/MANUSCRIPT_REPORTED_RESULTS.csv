@@ -1,0 +1,16 @@
+cohort,task,denominator,metric,reported_value,reproduction_note
+Internal CQ500,Binary detection,N=73,Accuracy,97.26%,71/73
+Internal CQ500,Binary detection,29 positive,Sensitivity,96.55%,28/29
+Internal CQ500,Binary detection,44 negative,Specificity,97.73%,43/44
+Internal CQ500,Binary detection,N=73,AUROC,0.9891,stored scores required
+Internal CQ500,Severity,N=73,Accuracy,94.52%,69/73
+Internal CQ500,Severity,N=73,Macro-F1,0.9201,per-study predictions required
+External cohort,Binary detection,N=182,Accuracy,95.60%,174/182
+External cohort,Binary detection,86 positive,Sensitivity,96.51%,83/86
+External cohort,Binary detection,96 negative,Specificity,94.79%,91/96
+External cohort,Binary detection,N=182,AUROC,0.9734,external scores required
+External cohort,Severity,N=182,Accuracy,91.21%,166/182
+External cohort,Severity,N=182,Macro-F1,0.8876,confusion matrix
+Grad-CAM,Ventricular ROI overlap,100 studies,Mean IoU,0.779,ROI masks required
+Grad-CAM,Ventricular ROI overlap,100 studies,Mean Dice,0.875,ROI masks required
+Latency,Complete 128-slice study,A100 40 GB,Median latency,21.6 ms,timing logs required
