@@ -1,0 +1,7 @@
+extends: configs/neuroxnet.yaml
+experiment: cv5
+cv:
+  folds: 5
+  fold_file: data/splits/cq500_cv5_folds.csv
+  inner_val_fraction: 0.15
+  stratify_on: y_sev
