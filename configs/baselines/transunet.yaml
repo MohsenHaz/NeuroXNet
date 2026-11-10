@@ -1,0 +1,11 @@
+# Baseline transunet: same split, preprocessing, optimiser, schedule, heads and seed as configs/neuroxnet.yaml
+extends: configs/neuroxnet.yaml
+experiment: baseline_transunet
+model:
+  name: baseline
+  backbone: transunet
+  pretrained: true
+  use_msam: false
+  use_csag: false
+  use_fpn: false
+  severity_head: true

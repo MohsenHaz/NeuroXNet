@@ -1,0 +1,4 @@
+extends: configs/neuroxnet.yaml
+experiment: ablation_plus_fpn
+model: {name: neuroxnet, backbone: efficientnet_b4, pretrained: true, use_msam: true, use_csag: true, use_fpn: true, severity_head: true}
+loss: {type: joint, lambda_d: 1.0, lambda_s: 1.5, lambda_l2: 0.005, lambda_orth: 0.005, label_smoothing: 0.0}

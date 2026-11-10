@@ -1,0 +1,11 @@
+# Baseline effb4: same split, preprocessing, optimiser, schedule, heads and seed as configs/neuroxnet.yaml
+extends: configs/neuroxnet.yaml
+experiment: baseline_effb4
+model:
+  name: baseline
+  backbone: efficientnet_b4
+  pretrained: true
+  use_msam: false
+  use_csag: false
+  use_fpn: false
+  severity_head: true
