@@ -1,43 +1,41 @@
-"""Streaming CQ500 preprocessing. Does not retain all volumes in RAM."""
-import argparse, json, pathlib, sys
-import numpy as np, pandas as pd
-sys.path.insert(0, 'src')
+"""Converts every CQ500 study to data/preprocessed/<study_id>.npy (128 x 256 x 256), logs the training-set
+normalisation constants, and (with --make-splits) creates the patient-level 70/15/15 split and the 5-fold assignment."""
+import argparse, json, pathlib, sys, numpy as np, pandas as pd
+sys.path.insert(0, "src")
 from neuroxnet.config import load_config
 from neuroxnet.data.dicom_io import read_series, select_primary_series
-from neuroxnet.data.preprocess import brain_window, preprocess_volume
-from neuroxnet.data.slice_select import select_window
+from neuroxnet.data.preprocess import brain_window, preprocess_volume, training_set_statistics
+from sklearn.model_selection import train_test_split
 
-ap=argparse.ArgumentParser(); ap.add_argument('--config',default='configs/neuroxnet.yaml'); ap.add_argument('--raw',default='data/raw/cq500'); ap.add_argument('--make-splits',action='store_true'); ap.add_argument('--seed',type=int,default=42); a=ap.parse_args()
-cfg=load_config(a.config); d=cfg['data']; out=pathlib.Path(d['root']); out.mkdir(parents=True,exist_ok=True)
-pathlib.Path('logs').mkdir(parents=True,exist_ok=True); pathlib.Path('data/splits').mkdir(parents=True,exist_ok=True)
+ap = argparse.ArgumentParser(); ap.add_argument("--config", default="configs/neuroxnet.yaml"); ap.add_argument("--raw", default="data/raw/cq500")
+ap.add_argument("--make-splits", action="store_true"); ap.add_argument("--seed", type=int, default=42); a = ap.parse_args()
+cfg = load_config(a.config); d = cfg["data"]
+lab = pd.read_csv(d["label_file"])
+out = pathlib.Path(d["root"]); out.mkdir(parents=True, exist_ok=True)
+
 if a.make_splits:
-    import subprocess
-    subprocess.run([sys.executable,'scripts/make_frozen_splits.py','--labels',d['label_file'],'--seed',str(a.seed)],check=True)
-lab=pd.read_csv(d['label_file'])
-if not {'study_id','final_label'}.issubset(lab.columns): raise SystemExit('Populate the source labels CSV first; header-only template cannot preprocess.')
-split_path=pathlib.Path(d['split_file'])
-if not split_path.exists() or split_path.stat().st_size==0: raise SystemExit(f'Missing frozen split file: {split_path}')
-split=pd.read_csv(split_path).set_index('study_id')['split']
-# Welford-style aggregate over the actual training subset, one study at a time.
-count=0; mean=0.0; M2=0.0
-for sid in lab.study_id.astype(str):
-    if split.get(sid)!='train': continue
-    sdir=select_primary_series(pathlib.Path(a.raw)/sid); vol,thick,_=read_series(sdir)
-    if thick>0 and not (d['thickness_range_mm'][0]<=thick<=d['thickness_range_mm'][1]): print(f'warning: {sid} slice thickness {thick} mm outside configured range')
-    v=brain_window(vol,d['window_level'],d['window_width'])
-    v,_=select_window(v,d['slices']);
-    # Match the exact resize/interpolation used by preprocess_volume before statistics.
-    from neuroxnet.data.preprocess import resize_inplane
-    v=resize_inplane(v,d['height'],d['width']).astype(np.float64).ravel()
-    n=v.size; m=float(v.mean()); s=float(((v-m)**2).sum())
-    delta=m-mean; total=count+n
-    M2 += s + delta*delta*count*n/total; mean += delta*n/total; count=total
-if count==0: raise SystemExit('No training studies found in frozen split.')
-std=float(np.sqrt(M2/count)); stats={'mean':float(mean),'std':std,'n_voxels':int(count),'split_file':str(split_path),'seed':a.seed}
-pathlib.Path('logs/normalisation_constants.json').write_text(json.dumps(stats,indent=2))
-cfg['data']['normalisation']={'mean':float(mean),'std':std}
-# Second pass: preprocess/write one study at a time; memory use bounded to one volume.
-for sid in lab.study_id.astype(str):
-    sdir=select_primary_series(pathlib.Path(a.raw)/sid); vol,_,_=read_series(sdir)
-    v,mask=preprocess_volume(vol,cfg); np.save(out/f'{sid}.npy',v.astype(np.float16))
-print(f'Preprocessed {len(lab)} studies; train-only mean={mean:.6f}, std={std:.6f}')
+    tr, rest = train_test_split(lab, test_size=0.30, random_state=a.seed, stratify=lab.final_label)
+    va, te = train_test_split(rest, test_size=73 / len(rest), random_state=a.seed, stratify=rest.final_label)
+    pd.concat([tr.assign(split="train"), va.assign(split="val"), te.assign(split="test")])[["study_id", "split"]].to_csv(d["split_file"], index=False)
+    from neuroxnet.training.cross_validate import make_folds
+    make_folds(load_config("configs/cv5.yaml"), a.seed).to_csv("data/splits/cq500_cv5_folds.csv", index=False)
+    print("splits written; commit them and never regenerate after training")
+
+split = pd.read_csv(d["split_file"]).set_index("study_id")["split"]
+# pass 1: training-set statistics on [0,1] windowed voxels (resized, selected window) so that the config constants are reproducible
+hu_cache = {}
+for sid in lab.study_id:
+    sdir = select_primary_series(pathlib.Path(a.raw) / sid)
+    vol, thick, _ = read_series(sdir)
+    if not (d["thickness_range_mm"][0] <= thick <= d["thickness_range_mm"][1]) and thick > 0:
+        print(f"warning: {sid} slice thickness {thick} mm outside configured range")
+    hu_cache[sid] = vol
+train_vols = (brain_window(hu_cache[s], d["window_level"], d["window_width"]) for s in lab.study_id if split.get(s) == "train")
+mean, std = training_set_statistics(train_vols)
+json.dump({"mean": mean, "std": std}, open("logs/normalisation_constants.json", "w"), indent=2)
+print(f"training-set mean={mean:.4f} std={std:.4f}  (config holds {d['normalisation']['mean']}, {d['normalisation']['std']})")
+cfg["data"]["normalisation"] = {"mean": mean, "std": std}
+for sid, vol in hu_cache.items():
+    v, mask = preprocess_volume(vol, cfg)
+    np.save(out / f"{sid}.npy", v.astype(np.float16))
+print(f"preprocessed {len(hu_cache)} studies -> {out}")

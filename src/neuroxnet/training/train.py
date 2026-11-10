@@ -2,22 +2,12 @@
 before the loss (Section 3.9). AdamW + cosine annealing (Eq. 20), early stopping on validation loss (patience 15),
 checkpoint selection on validation AUROC (detection) and macro-F1 (severity). Writes a prediction CSV for every split."""
 import math, json, time, subprocess, pathlib, numpy as np, pandas as pd, torch
-from torch.utils.data import DataLoader, get_worker_info
-from torch.utils.checkpoint import checkpoint
+from torch.utils.data import DataLoader
 from sklearn.metrics import roc_auc_score, f1_score
 from ..data.dataset import CTStudyDataset, class_counts
 from ..models import build
 from ..inference.aggregate import aggregate_logits
 from .losses import total_loss, class_weights_inverse_frequency
-
-
-def _seed_worker(worker_id):
-    worker_seed = torch.initial_seed() % 2**32
-    import random
-    random.seed(worker_seed); np.random.seed(worker_seed)
-    info = get_worker_info()
-    if info is not None and hasattr(info.dataset, "gen"):
-        info.dataset.gen.manual_seed(worker_seed)
 
 def git_hash():
     try:
@@ -34,17 +24,7 @@ def forward_study(model, x, chunk):
     """x: [S,H,W] -> study-level (det_logit, sev_logits, fagg_mean). Slices forwarded in chunks to bound memory."""
     dets, sevs, faggs = [], [], []
     for i in range(0, x.shape[0], chunk):
-        xin = x[i:i + chunk, None]
-        if model.training and torch.is_grad_enabled() and xin.requires_grad is False:
-            # Checkpoint model activations to reduce peak memory on 40-GB GPUs.
-            def _fwd(z):
-                dd, ss, ff = model(z)
-                if ss is None: ss = torch.empty((0,), device=dd.device, dtype=dd.dtype)
-                return dd, ss, ff
-            d, s, f = checkpoint(_fwd, xin, use_reentrant=False)
-            if s.numel() == 0: s = None
-        else:
-            d, s, f = model(xin)
+        d, s, f = model(x[i:i + chunk, None])
         dets.append(d); faggs.append(f.mean(0, keepdim=True))
         if s is not None: sevs.append(s)
     det = torch.cat(dets); sev = torch.cat(sevs) if sevs else None
@@ -87,9 +67,8 @@ def train(cfg, split_ids, out_dir, pred_prefix, seed=42, device=None, log=print)
     T = cfg["train"]
     opt = torch.optim.AdamW(model.parameters(), lr=T["lr_max"], weight_decay=T["weight_decay"])
     train_ds = CTStudyDataset(cfg, split_ids["train"], train=True, seed=seed)
-    generator = torch.Generator().manual_seed(seed)
-    loader = DataLoader(train_ds, batch_size=T["batch_studies"], shuffle=True, num_workers=T.get("num_workers", 2), drop_last=False,
-                        generator=generator, worker_init_fn=_seed_worker, persistent_workers=T.get("num_workers", 2) > 0)
+    loader = DataLoader(train_ds, batch_size=T["batch_studies"], shuffle=True, num_workers=4, drop_last=False,
+                        generator=torch.Generator().manual_seed(seed))
     total_steps = T["epochs"] * len(loader)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: (T["lr_min"] + 0.5 * (T["lr_max"] - T["lr_min"]) * (1 + math.cos(math.pi * s / total_steps))) / T["lr_max"])
     scaler = torch.cuda.amp.GradScaler(enabled=device.type == "cuda")

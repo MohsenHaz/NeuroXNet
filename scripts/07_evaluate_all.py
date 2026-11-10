@@ -16,10 +16,7 @@ ABL = {"backbone_only": "Backbone Only", "plus_msam": "+ MSAM", "plus_csag": "+ 
 md = []
 
 def load(p):
-    path = pathlib.Path(p)
-    if not path.exists(): return None
-    df = pd.read_csv(path)
-    return df if not df.empty else None
+    return pd.read_csv(p) if pathlib.Path(p).exists() else None
 
 def P4(df): return df[["p0", "p1", "p2", "p3"]].values
 
