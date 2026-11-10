@@ -1,0 +1,76 @@
+{
+  "present": 0,
+  "required": 14,
+  "missing": [
+    {
+      "artifact": "CQ500 split",
+      "path": "data/splits/cq500_split_seed42.csv",
+      "present": false
+    },
+    {
+      "artifact": "CV folds",
+      "path": "data/splits/cq500_cv5_folds.csv",
+      "present": false
+    },
+    {
+      "artifact": "derived severity labels",
+      "path": "data/labels/cq500_severity_labels.csv",
+      "present": false
+    },
+    {
+      "artifact": "reader annotations",
+      "path": "data/labels/cq500_reader1_reader2_adjudicated.csv",
+      "present": false
+    },
+    {
+      "artifact": "approved annotation protocol",
+      "path": "data/labels/annotation_protocol.pdf",
+      "present": false
+    },
+    {
+      "artifact": "final checkpoint",
+      "path": "checkpoints/neuroxnet_final.pt",
+      "present": false
+    },
+    {
+      "artifact": "checkpoint checksums",
+      "path": "checkpoints/SHA256SUMS.txt",
+      "present": false
+    },
+    {
+      "artifact": "internal NeuroXNet predictions",
+      "path": "predictions/internal_test/neuroxnet.csv",
+      "present": false
+    },
+    {
+      "artifact": "external predictions",
+      "path": "data/external/external_predictions_deidentified.csv",
+      "present": false
+    },
+    {
+      "artifact": "Grad-CAM ROI IDs",
+      "path": "data/labels/gradcam_roi_subset_ids.csv",
+      "present": false
+    },
+    {
+      "artifact": "Grad-CAM ROI masks",
+      "path": "data/roi_masks",
+      "present": false
+    },
+    {
+      "artifact": "result tables",
+      "path": "results/tables",
+      "present": false
+    },
+    {
+      "artifact": "result figures",
+      "path": "results/figures",
+      "present": false
+    },
+    {
+      "artifact": "training logs",
+      "path": "logs",
+      "present": false
+    }
+  ]
+}
