@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this package, please cite the NeuroXNet manuscript and the Zenodo deposit."
+title: "NeuroXNet reproducibility package: detection and severity grading of hydrocephalus on non-contrast head CT"
+authors:
+  - family-names: "Alhazmi"
+    given-names: "Mohsen H."
+version: "1.0.0"
+date-released: "2026-10-28"
+license: MIT
+repository-code: "https://doi.org/10.5281/zenodo.TO-BE-ASSIGNED"

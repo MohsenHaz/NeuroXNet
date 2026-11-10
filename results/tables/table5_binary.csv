@@ -1,0 +1,2 @@
+Method,TP,FP,FN,TN,acc_pct,acc_ci,sens_pct,sens_ci,spec_pct,spec_ci,f1,auc,auc_ci,brier
+NeuroXNet (Ours),28,1,1,43,97.26,97.26 [90.5–99.2],96.55,96.55 [82.8–99.4],97.73,97.73 [88.2–99.6],0.9655,0.9992,[0.9954–1.0000],0.012

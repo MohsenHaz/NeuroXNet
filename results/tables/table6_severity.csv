@@ -1,0 +1,2 @@
+Method,acc_ci,macro_f1,weighted_f1,kappa,weighted_kappa,brier,N
+NeuroXNet (Ours),94.52 [86.7–97.8],0.9201,0.9455,0.9057,0.9447,0.049,73

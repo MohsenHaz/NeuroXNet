@@ -1,0 +1,6 @@
+Actual,Pred Normal,Pred Mild,Pred Moderate,Pred Severe,Total
+Actual Normal,43,1,0,0,44
+Actual Mild,1,11,0,0,12
+Actual Moderate,0,1,9,0,10
+Actual Severe,0,0,1,6,7
+Total,44,13,10,6,73
